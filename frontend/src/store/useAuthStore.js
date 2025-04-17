@@ -90,12 +90,14 @@ export const useAuthStore = create((set, get) => ({
 
     try {
       const socket = io(BASE_URL, {
+        path: '/socket.io',
         query: { userId: authUser._id },
         withCredentials: true,
         transports: ['websocket', 'polling'],
         reconnection: true,
         reconnectionAttempts: 5,
         reconnectionDelay: 1000,
+        secure: true
       });
 
       socket.on('connect', () => {

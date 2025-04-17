@@ -7,6 +7,7 @@ const app = express();
 const server = http.createServer(app);
 
 const io = new Server(server, {
+  path: '/socket.io',
   cors: {
     origin: [
       "http://localhost:5173",
@@ -15,8 +16,9 @@ const io = new Server(server, {
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"]
   },
+  allowEIO3: true,
+  transports: ['websocket', 'polling'],
 });
 
 const userSocketMap = {}; // {userId: socketId}
