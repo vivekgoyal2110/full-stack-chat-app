@@ -10,12 +10,12 @@ const io = new Server(server, {
   cors: {
     origin: [
       "http://localhost:5173",
-      "https://full-stack-chat-app-omega.vercel.app",
-      "https://full-stack-chat-app-viveks-projects.vercel.app",
+      "https://full-stack-chat-app-sepia.vercel.app",
       /\.vercel\.app$/
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"]
   },
 });
 

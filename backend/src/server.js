@@ -19,8 +19,7 @@ app.use(cookieParser());
 
 const allowedOrigins = [
     'http://localhost:5173',
-    'https://full-stack-chat-app-omega.vercel.app',
-    'https://full-stack-chat-app-viveks-projects.vercel.app'
+    'https://full-stack-chat-app-sepia.vercel.app'
 ];
 
 app.use(cors({
@@ -33,7 +32,8 @@ app.use(cors({
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-requested-with'],
+    exposedHeaders: ['set-cookie']
 }));
 
 app.use("/api/auth", authRoutes);
