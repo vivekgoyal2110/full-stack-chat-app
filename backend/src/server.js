@@ -20,16 +20,26 @@ app.use(cookieParser());
 // Configure CORS with credentials
 const allowedOrigins = [
     "http://localhost:5173",                  // local dev
-    "https://full-stack-chat-app-omega.vercel.app/"        // deployed frontend
-  ];
+    "https://full-stack-chat-app-omega.vercel.app",        // deployed frontend
+    /\.vercel\.app$/                         // any vercel subdomain
+];
 
 app.use(cors({
-  origin: allowedOrigins,
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.some(allowedOrigin => {
+            return typeof allowedOrigin === 'string' 
+                ? allowedOrigin === origin
+                : allowedOrigin.test(origin);
+        })) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
-
 
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
