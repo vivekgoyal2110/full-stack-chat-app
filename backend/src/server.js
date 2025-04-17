@@ -20,7 +20,7 @@ app.use(cookieParser());
 // Configure CORS with credentials
 const allowedOrigins = [
     "http://localhost:5173",                  // local dev
-    "https://full-stack-chat-osaktwg6c-vivek-goyals-projects.vercel.app/"        // deployed frontend
+    "https://full-stack-chat-osaktwg6c-vivek-goyals-projects.vercel.app"        // deployed frontend
   ];
 
 app.use(cors({
