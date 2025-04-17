@@ -3,7 +3,7 @@ import { generateToken } from '../lib/utils.js';
 import User from '../models/user.model.js'
 import bcrypt from 'bcryptjs'
 
-export const signup = async (req, res)=>{
+export const signup = async (req, res) => {
     const {fullName, email, password} = req.body
     try {
         if(password.length < 6){
@@ -31,10 +31,9 @@ export const signup = async (req, res)=>{
                 fullName: newUser.fullName,
                 email: newUser.email,
                 profilePic: newUser.profilePic,
-                token // Include token in response
+                token
             });
-        }
-        else{
+        } else {
             res.status(400).json({message: "Invalid user data"});
         }
     } catch (error) {
@@ -43,28 +42,28 @@ export const signup = async (req, res)=>{
     }
 };
 
-export const login = async (req, res)=>{
+export const login = async (req, res) => {
     const {email, password} = req.body;
     try {
         const user = await User.findOne({email})
         
         if(!user){
-            return res.status(400).json({message: "Invalid credentials!!"});
+            return res.status(400).json({message: "Invalid credentials"});
         }
 
         const isPasswordCorrect = await bcrypt.compare(password, user.password);
         if(!isPasswordCorrect){
-            return res.status(400).json({message: "Invalid credentials!!"});
+            return res.status(400).json({message: "Invalid credentials"});
         }
 
         const token = generateToken(user._id, res);
 
         res.status(200).json({
             _id: user._id,
-            fullName : user.fullName,
+            fullName: user.fullName,
             email: user.email,
-            profilePic : user.profilePic,
-            token // Include token in response
+            profilePic: user.profilePic,
+            token
         });
     } catch (error) {
         console.log("Error in login controller", error.message);
@@ -72,7 +71,7 @@ export const login = async (req, res)=>{
     }
 };
 
-export const logout = (req, res)=>{
+export const logout = (req, res) => {
     try {
         res.cookie("jwt", "", {
             maxAge: 0,
@@ -97,7 +96,6 @@ export const updateProfile = async(req, res) => {
             return res.status(400).json({message: "Profile pic is required!"});
         }
 
-        // Configure Cloudinary upload with error handling
         try {
             const uploadResponse = await cloudinary.uploader.upload(profilePic, {
                 resource_type: "auto",
@@ -119,7 +117,12 @@ export const updateProfile = async(req, res) => {
                 return res.status(404).json({ message: "User not found" });
             }
 
-            res.status(200).json(updatedUser);
+            // Include token in response for consistency
+            const token = generateToken(updatedUser._id, res);
+            res.status(200).json({
+                ...updatedUser.toJSON(),
+                token
+            });
         } catch (cloudinaryError) {
             console.error("Cloudinary upload error:", cloudinaryError);
             return res.status(500).json({ 
@@ -139,8 +142,14 @@ export const updateProfile = async(req, res) => {
 
 export const checkAuth = (req, res) => {
     try {
-        console.log("User inside checkauth: ", req.user);
-        res.status(200).json(req.user);
+        const token = generateToken(req.user._id, res);
+        res.status(200).json({
+            _id: req.user._id,
+            fullName: req.user.fullName,
+            email: req.user.email,
+            profilePic: req.user.profilePic,
+            token
+        });
     } catch (error) {
         console.log("Error in checkAuth controller", error.message);
         res.status(500).json({message: "Internal server error"});
