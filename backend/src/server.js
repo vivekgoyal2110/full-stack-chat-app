@@ -18,16 +18,24 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
 
 // Configure CORS with credentials
+const allowedOrigins = [
+    "http://localhost:5173",                  // local dev
+    "https://full-stack-chat-osaktwg6c-vivek-goyals-projects.vercel.app/"        // deployed frontend
+  ];
+
 app.use(cors({
-    origin: "http://localhost:5173",
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+  origin: allowedOrigins,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/friends", friendRoutes);
+
+
 
 app.get("/", (req, res) => {
     res.send("Backend is working ✅");
