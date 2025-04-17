@@ -7,18 +7,35 @@ const app = express();
 const server = http.createServer(app);
 
 const io = new Server(server, {
-  path: '/socket.io',
   cors: {
-    origin: [
-      "http://localhost:5173",
-      "https://full-stack-chat-app-sepia.vercel.app",
-      /\.vercel\.app$/
-    ],
+    origin: function(origin, callback) {
+      // Allow requests with no origin (like mobile apps)
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      const allowedOrigins = [
+        'http://localhost:5173',
+        'https://full-stack-chat-app-sepia.vercel.app'
+      ];
+
+      if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
   },
   allowEIO3: true,
   transports: ['websocket', 'polling'],
+  cookie: {
+    name: "io",
+    httpOnly: true,
+    sameSite: "none",
+    secure: true
+  }
 });
 
 const userSocketMap = {}; // {userId: socketId}

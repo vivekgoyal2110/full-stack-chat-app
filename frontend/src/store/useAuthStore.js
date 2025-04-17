@@ -35,7 +35,7 @@ export const useAuthStore = create((set, get) => ({
       toast.success("Account created successfully");
       get().connectSocket();
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(error.response?.data?.message || "Error creating account");
     } finally {
       set({ isSigningUp: false });
     }
@@ -49,7 +49,7 @@ export const useAuthStore = create((set, get) => ({
       toast.success("Logged in successfully");
       get().connectSocket();
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(error.response?.data?.message || "Error logging in");
     } finally {
       set({ isLoggingIn: false });
     }
@@ -61,8 +61,11 @@ export const useAuthStore = create((set, get) => ({
       set({ authUser: null });
       toast.success("Logged out successfully");
       get().disconnectSocket();
+
+      // Clear any stored data
+      localStorage.removeItem('user');
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(error.response?.data?.message || "Error logging out");
     }
   },
 
@@ -97,7 +100,11 @@ export const useAuthStore = create((set, get) => ({
         reconnection: true,
         reconnectionAttempts: 5,
         reconnectionDelay: 1000,
-        secure: true
+        secure: true,
+        forceNew: true,
+        extraHeaders: {
+          Authorization: `Bearer ${authUser.token}`
+        }
       });
 
       socket.on('connect', () => {
@@ -106,6 +113,10 @@ export const useAuthStore = create((set, get) => ({
 
       socket.on('connect_error', (error) => {
         console.error('Socket connection error:', error);
+        // Attempt to reconnect with different transport
+        if (error.message.includes('websocket')) {
+          socket.io.opts.transports = ['polling'];
+        }
       });
 
       socket.on("getOnlineUsers", (users) => {

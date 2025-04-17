@@ -19,12 +19,22 @@ app.use(cookieParser());
 
 const allowedOrigins = [
     'http://localhost:5173',
-    'https://full-stack-chat-app-sepia.vercel.app'
+    'https://full-stack-chat-app-sepia.vercel.app',
+    /\.vercel\.app$/
 ];
 
 app.use(cors({
     origin: function(origin, callback) {
-        if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+        // Allow requests with no origin (like mobile apps)
+        if (!origin) {
+            return callback(null, true);
+        }
+
+        if (allowedOrigins.some(allowedOrigin => 
+            allowedOrigin instanceof RegExp 
+                ? allowedOrigin.test(origin)
+                : allowedOrigin === origin
+        )) {
             callback(null, true);
         } else {
             callback(new Error('Not allowed by CORS'));
@@ -32,8 +42,8 @@ app.use(cors({
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-requested-with'],
-    exposedHeaders: ['set-cookie']
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['set-cookie'],
 }));
 
 app.use("/api/auth", authRoutes);
