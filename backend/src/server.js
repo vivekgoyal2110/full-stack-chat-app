@@ -29,6 +29,10 @@ app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/friends", friendRoutes);
 
+app.get("/", (req, res) => {
+    res.send("Backend is working ✅");
+  });
+
 server.listen(PORT, ()=>{
     console.log(`Server started on Port ${PORT}`);
     connectDB();
