@@ -10,26 +10,22 @@ import { app, server } from './lib/socket.js';
 
 dotenv.config();
 
-const PORT = process.env.PORT || 5002;
+const PORT = process.env.PORT || 5001;
+const NODE_ENV = process.env.NODE_ENV || 'development';
 
-// Increase payload size limit for image uploads
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
 
-// Configure CORS with credentials
 const allowedOrigins = [
-    "http://localhost:5173",
-    "https://full-stack-chat-app-omega.vercel.app",
-    "https://full-stack-chat-app-viveks-projects.vercel.app"    // add your specific Vercel domain
+    'http://localhost:5173',
+    'https://full-stack-chat-app-omega.vercel.app',
+    'https://full-stack-chat-app-viveks-projects.vercel.app'
 ];
 
 app.use(cors({
     origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
-        
-        if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
+        if (!origin || allowedOrigins.some(allowed => origin.startsWith(allowed))) {
             callback(null, true);
         } else {
             callback(new Error('Not allowed by CORS'));
@@ -37,11 +33,10 @@ app.use(cors({
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-    exposedHeaders: ['set-cookie']
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-requested-with']
 }));
 
-// Add OPTIONS handling for preflight requests
+// Handle preflight requests
 app.options('*', cors());
 
 app.use("/api/auth", authRoutes);
@@ -49,10 +44,14 @@ app.use("/api/messages", messageRoutes);
 app.use("/api/friends", friendRoutes);
 
 app.get("/", (req, res) => {
-    res.send("Backend is working ✅");
-  });
+    res.json({ 
+        message: "Backend is running",
+        environment: NODE_ENV,
+        timestamp: new Date().toISOString()
+    });
+});
 
-server.listen(PORT, ()=>{
-    console.log(`Server started on Port ${PORT}`);
+server.listen(PORT, () => {
+    console.log(`Server running in ${NODE_ENV} mode on port ${PORT}`);
     connectDB();
 });
