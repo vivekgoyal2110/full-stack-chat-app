@@ -11,7 +11,8 @@ const io = new Server(server, {
     origin: [
       "http://localhost:5173",
       "https://full-stack-chat-app-omega.vercel.app",
-      "https://full-stack-chat-app-viveks-projects.vercel.app"
+      "https://full-stack-chat-app-viveks-projects.vercel.app",
+      /\.vercel\.app$/
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
