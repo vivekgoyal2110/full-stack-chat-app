@@ -19,33 +19,34 @@ app.use(cookieParser());
 
 // Configure CORS with credentials
 const allowedOrigins = [
-    "http://localhost:5173",                  // local dev
-    "https://full-stack-chat-app-omega.vercel.app",        // deployed frontend
-    /\.vercel\.app$/                         // any vercel subdomain
+    "http://localhost:5173",
+    "https://full-stack-chat-app-omega.vercel.app",
+    "https://full-stack-chat-app-viveks-projects.vercel.app"    // add your specific Vercel domain
 ];
 
 app.use(cors({
     origin: function (origin, callback) {
-        if (!origin || allowedOrigins.some(allowedOrigin => {
-            return typeof allowedOrigin === 'string' 
-                ? allowedOrigin === origin
-                : allowedOrigin.test(origin);
-        })) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
             callback(null, true);
         } else {
             callback(new Error('Not allowed by CORS'));
         }
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+    exposedHeaders: ['set-cookie']
 }));
+
+// Add OPTIONS handling for preflight requests
+app.options('*', cors());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/friends", friendRoutes);
-
-
 
 app.get("/", (req, res) => {
     res.send("Backend is working ✅");
