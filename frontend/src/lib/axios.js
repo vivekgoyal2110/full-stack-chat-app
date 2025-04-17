@@ -10,10 +10,10 @@ export const axiosInstance = axios.create({
   }
 });
 
-// Add a token interceptor
+// Add request interceptor to include token
 axiosInstance.interceptors.request.use(
   (config) => {
-    const authUser = JSON.parse(localStorage.getItem('authUser'));
+    const authUser = JSON.parse(localStorage.getItem('authUser') || '{}');
     if (authUser?.token) {
       config.headers.Authorization = `Bearer ${authUser.token}`;
     }
@@ -29,9 +29,7 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Clear any stored user data
       localStorage.removeItem('authUser');
-      // Redirect to login if needed
       window.location.href = '/login';
     }
     return Promise.reject(error);

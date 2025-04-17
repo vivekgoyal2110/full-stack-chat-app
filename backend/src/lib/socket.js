@@ -10,7 +10,6 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: function(origin, callback) {
-      // Allow requests with no origin (like mobile apps)
       if (!origin) {
         return callback(null, true);
       }
@@ -31,12 +30,6 @@ const io = new Server(server, {
   },
   allowEIO3: true,
   transports: ['websocket', 'polling'],
-  cookie: {
-    name: "io",
-    httpOnly: true,
-    sameSite: "none",
-    secure: true
-  }
 });
 
 const extractToken = (socket) => {
@@ -103,16 +96,11 @@ io.on("connection", (socket) => {
   const userId = socket.user._id;
   if (userId) {
     userSocketMap[userId] = socket.id;
-    // Broadcast when a user connects
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
   }
 
-  // Handle real-time messaging
   socket.on("sendMessage", async (message) => {
-    console.log("Message received:", message);
-
     try {
-      // Check if either user has blocked the other
       const [sender, receiver] = await Promise.all([
         User.findById(message.senderId),
         User.findById(message.receiverId)
@@ -120,7 +108,6 @@ io.on("connection", (socket) => {
 
       if (sender.blockedUsers.includes(message.receiverId) || 
           receiver.blockedUsers.includes(message.senderId)) {
-        // Don't forward the message if either user is blocked
         return;
       }
 
@@ -140,7 +127,6 @@ io.on("connection", (socket) => {
 
   socket.on("typing", async ({ receiverId, isTyping }) => {
     try {
-      // Check if either user has blocked the other
       const [sender, receiver] = await Promise.all([
         User.findById(userId),
         User.findById(receiverId)
@@ -148,7 +134,6 @@ io.on("connection", (socket) => {
 
       if (sender.blockedUsers.includes(receiverId) || 
           receiver.blockedUsers.includes(userId)) {
-        // Don't forward typing status if either user is blocked
         return;
       }
 

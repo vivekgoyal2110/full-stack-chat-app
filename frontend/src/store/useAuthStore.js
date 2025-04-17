@@ -15,21 +15,25 @@ export const useAuthStore = create((set, get) => ({
   socket: null,
 
   init: () => {
-    // Try to restore auth state from localStorage
     const storedUser = localStorage.getItem('authUser');
     if (storedUser) {
       const user = JSON.parse(storedUser);
       set({ authUser: user });
-      get().connectSocket();
+      return user;
     }
+    return null;
   },
 
   checkAuth: async () => {
     try {
+      const storedUser = get().init(); // First try to restore from localStorage
+      if (!storedUser) {
+        set({ isCheckingAuth: false, authUser: null });
+        return;
+      }
+
       const res = await axiosInstance.get("/auth/check");
-      // Update the stored user data but keep the token
-      const currentUser = JSON.parse(localStorage.getItem('authUser') || '{}');
-      const updatedUser = { ...res.data, token: currentUser.token };
+      const updatedUser = { ...res.data, token: storedUser.token };
       localStorage.setItem('authUser', JSON.stringify(updatedUser));
       set({ authUser: updatedUser });
       get().connectSocket();
@@ -88,7 +92,8 @@ export const useAuthStore = create((set, get) => ({
     set({ isUpdatingProfile: true });
     try {
       const res = await axiosInstance.put("/auth/update-profile", data);
-      const updatedUser = { ...get().authUser, ...res.data };
+      const currentUser = JSON.parse(localStorage.getItem('authUser') || '{}');
+      const updatedUser = { ...res.data, token: currentUser.token };
       localStorage.setItem('authUser', JSON.stringify(updatedUser));
       set({ authUser: updatedUser });
       toast.success("Profile updated successfully");
