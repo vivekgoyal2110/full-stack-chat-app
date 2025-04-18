@@ -85,28 +85,33 @@ export const sendFriendRequest = async (req, res) => {
         }
 
         // Add friend request
-        receiver.friendRequests.push({
+        const newRequest = {
             from: currentUser._id,
             status: "pending"
-        });
-
+        };
+        
+        receiver.friendRequests.push(newRequest);
         await receiver.save();
 
-        // Emit friend request event via socket
+        // Get the actual request document that was created
+        const populatedReceiver = await User.findById(receiver._id)
+            .populate({
+                path: "friendRequests.from",
+                select: "fullName email profilePic"
+            });
+            
+        const createdRequest = populatedReceiver.friendRequests
+            .find(req => req.from._id.toString() === currentUser._id.toString());
+
+        // Emit friend request event via socket with complete request data
         const receiverSocketId = getReceiverSocketId(userId);
         if (receiverSocketId) {
             io.to(receiverSocketId).emit("friendRequestReceived", {
-                from: {
-                    _id: currentUser._id,
-                    fullName: currentUser.fullName,
-                    email: currentUser.email,
-                    profilePic: currentUser.profilePic
-                }
+                request: createdRequest
             });
         }
 
         res.json({ message: "Friend request sent successfully" });
-
     } catch (error) {
         console.error("Error in sendFriendRequest:", error);
         res.status(500).json({ message: "Error sending friend request" });
@@ -119,7 +124,11 @@ export const handleFriendRequest = async (req, res) => {
         const { action } = req.body; // "accept" or "reject"
         const currentUser = req.user;
 
-        const user = await User.findById(currentUser._id);
+        const user = await User.findById(currentUser._id)
+            .populate({
+                path: "friendRequests.from",
+                select: "fullName email profilePic"
+            });
         
         // Find the request
         const requestIndex = user.friendRequests.findIndex(
@@ -138,17 +147,18 @@ export const handleFriendRequest = async (req, res) => {
 
         if (action === "accept") {
             // Check if either user has blocked the other
-            const otherUser = await User.findById(request.from);
-            if (user.blockedUsers.includes(request.from) || otherUser.blockedUsers.includes(currentUser._id)) {
+            const otherUser = await User.findById(request.from._id);
+            if (user.blockedUsers.includes(request.from._id) || 
+                otherUser.blockedUsers.includes(currentUser._id)) {
                 return res.status(403).json({ message: "Cannot accept request from blocked user" });
             }
 
             // Add users to each other's friends lists
             await Promise.all([
                 User.findByIdAndUpdate(currentUser._id, {
-                    $push: { friends: request.from }
+                    $push: { friends: request.from._id }
                 }),
-                User.findByIdAndUpdate(request.from, {
+                User.findByIdAndUpdate(request.from._id, {
                     $push: { friends: currentUser._id }
                 })
             ]);
@@ -158,12 +168,18 @@ export const handleFriendRequest = async (req, res) => {
         request.status = action === "accept" ? "accepted" : "rejected";
         await user.save();
 
-        // Emit event to notify the other user
-        const otherUserSocketId = getReceiverSocketId(request.from);
+        // Emit event to notify the other user with complete user data
+        const otherUserSocketId = getReceiverSocketId(request.from._id);
         if (otherUserSocketId) {
-            io.to(otherUserSocketId).emit("friendRequestHandled", {
+            io.to(otherUserSocketId).emit("friendRequestResponseReceived", {
                 status: action,
-                userId: currentUser._id
+                from: {
+                    _id: currentUser._id,
+                    fullName: currentUser.fullName,
+                    email: currentUser.email,
+                    profilePic: currentUser.profilePic
+                },
+                requestId
             });
         }
 

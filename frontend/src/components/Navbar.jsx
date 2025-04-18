@@ -17,7 +17,9 @@ const Navbar = () => {
         getFriendRequests,
         handleFriendRequest,
         sendFriendRequest,
-        isSearching 
+        isSearching,
+        subscribeToFriendEvents,
+        unsubscribeFromFriendEvents
     } = useFriendStore();
 
     const [showSearch, setShowSearch] = useState(false);
@@ -25,12 +27,16 @@ const Navbar = () => {
     const searchRef = useRef(null);
     const requestsRef = useRef(null);
 
-    // Only fetch friend requests if user is authenticated
+    // Load friend requests and subscribe to events when authenticated
     useEffect(() => {
         if (authUser) {
             getFriendRequests();
+            subscribeToFriendEvents();
         }
-    }, [getFriendRequests, authUser]);
+        return () => {
+            unsubscribeFromFriendEvents();
+        };
+    }, [authUser]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -54,6 +60,16 @@ const Navbar = () => {
             clearSearchResults();
         }
     }, 300);
+
+    const handleAcceptRequest = async (requestId) => {
+        await handleFriendRequest(requestId, "accept");
+        // No need to manually refresh friend requests as it's handled in the store
+    };
+
+    const handleRejectRequest = async (requestId) => {
+        await handleFriendRequest(requestId, "reject");
+        // No need to manually refresh friend requests as it's handled in the store
+    };
 
     // Check if we're on login or signup page
     const isAuthPage = pathname === '/login' || pathname === '/signup';
@@ -127,13 +143,13 @@ const Navbar = () => {
                                                 ) : searchResults.hasPendingRequest ? (
                                                     <div className="flex gap-2">
                                                         <button 
-                                                            onClick={() => handleFriendRequest(searchResults.user._id, "accept")}
+                                                            onClick={() => handleAcceptRequest(searchResults.user._id)}
                                                             className="btn btn-success btn-sm"
                                                         >
                                                             Accept
                                                         </button>
                                                         <button 
-                                                            onClick={() => handleFriendRequest(searchResults.user._id, "reject")}
+                                                            onClick={() => handleRejectRequest(searchResults.user._id)}
                                                             className="btn btn-error btn-sm"
                                                         >
                                                             Reject
@@ -204,13 +220,13 @@ const Navbar = () => {
                                                             </div>
                                                             <div className="flex gap-2">
                                                                 <button
-                                                                    onClick={() => handleFriendRequest(request._id, "accept")}
+                                                                    onClick={() => handleAcceptRequest(request._id)}
                                                                     className="btn btn-success btn-xs"
                                                                 >
                                                                     Accept
                                                                 </button>
                                                                 <button
-                                                                    onClick={() => handleFriendRequest(request._id, "reject")}
+                                                                    onClick={() => handleRejectRequest(request._id)}
                                                                     className="btn btn-error btn-xs"
                                                                 >
                                                                     Reject

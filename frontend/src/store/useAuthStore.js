@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { axiosInstance } from "../lib/axios.js";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
+import { useFriendStore } from "./useFriendStore.js";
 
 const BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -125,6 +126,8 @@ export const useAuthStore = create((set, get) => ({
 
       socket.on('connect', () => {
         console.log('Socket connected successfully');
+        // Subscribe to friend events when socket connects
+        useFriendStore.getState().subscribeToFriendEvents();
       });
 
       socket.on('connect_error', (error) => {
@@ -148,6 +151,8 @@ export const useAuthStore = create((set, get) => ({
   disconnectSocket: () => {
     const socket = get().socket;
     if (socket) {
+      // Unsubscribe from friend events before disconnecting
+      useFriendStore.getState().unsubscribeFromFriendEvents();
       socket.disconnect();
       set({ socket: null, onlineUsers: [] });
     }

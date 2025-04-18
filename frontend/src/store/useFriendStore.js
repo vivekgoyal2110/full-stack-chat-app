@@ -2,6 +2,7 @@ import { create } from "zustand";
 import toast from "react-hot-toast";
 import { axiosInstance } from "../lib/axios.js";
 import { useChatStore } from "./useChatStore.js";
+import { useAuthStore } from "./useAuthStore.js";
 
 export const useFriendStore = create((set, get) => ({
     searchResults: null,
@@ -11,6 +12,51 @@ export const useFriendStore = create((set, get) => ({
     isSendingRequest: false,
     isLoadingRequests: false,
     isLoadingBlockedUsers: false,
+
+    // Socket event subscriptions
+    subscribeToFriendEvents: () => {
+        const socket = useAuthStore.getState().socket;
+        if (!socket) return;
+
+        // Remove existing listeners to prevent duplicates
+        socket.off("friendRequestReceived");
+        socket.off("friendRequestResponseReceived");
+
+        // Listen for new friend requests
+        socket.on("friendRequestReceived", ({ request }) => {
+            if (request && request.from) {
+                // Add the new request to the state
+                set(state => ({
+                    friendRequests: [...state.friendRequests, request]
+                }));
+                toast.success(`New friend request from ${request.from.fullName}`);
+            }
+        });
+
+        // Listen for friend request responses
+        socket.on("friendRequestResponseReceived", ({ from, status, requestId }) => {
+            const message = status === 'accepted' 
+                ? `${from.fullName} accepted your friend request` 
+                : `${from.fullName} rejected your friend request`;
+            
+            toast(message, {
+                icon: status === 'accepted' ? '👍' : '👎'
+            });
+
+            if (status === 'accepted') {
+                // Refresh friends list if request was accepted
+                useChatStore.getState().getUsers();
+            }
+        });
+    },
+
+    unsubscribeFromFriendEvents: () => {
+        const socket = useAuthStore.getState().socket;
+        if (socket) {
+            socket.off("friendRequestReceived");
+            socket.off("friendRequestResponseReceived");
+        }
+    },
 
     searchUsers: async (email) => {
         if (!email) return;
@@ -55,8 +101,16 @@ export const useFriendStore = create((set, get) => ({
         try {
             const res = await axiosInstance.put(`/friends/request/${requestId}`, { action });
             toast.success(res.data.message);
-            // Update friend requests list
-            get().getFriendRequests();
+            
+            // Update friend requests list in state
+            set(state => ({
+                friendRequests: state.friendRequests.filter(req => req._id !== requestId)
+            }));
+            
+            if (action === 'accepted') {
+                // Refresh friends list if request was accepted
+                useChatStore.getState().getUsers();
+            }
         } catch (error) {
             toast.error(error.response?.data?.message || "Error handling friend request");
         }

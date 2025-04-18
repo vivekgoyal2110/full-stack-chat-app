@@ -54,6 +54,28 @@ io.on("connection", (socket) => {
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
   }
 
+  // Friend request events
+  socket.on("sendFriendRequest", async (data) => {
+    const { from, to } = data;
+    const receiverSocketId = getReceiverSocketId(to);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("friendRequestReceived", {
+        from: from
+      });
+    }
+  });
+
+  socket.on("friendRequestResponse", async (data) => {
+    const { from, to, status } = data;
+    const senderSocketId = getReceiverSocketId(to);
+    if (senderSocketId) {
+      io.to(senderSocketId).emit("friendRequestResponseReceived", {
+        from,
+        status
+      });
+    }
+  });
+
   // Handle real-time messaging
   socket.on("sendMessage", async (message) => {
     console.log("Message received:", message);
