@@ -56,9 +56,6 @@ export const useAuthStore = create((set, get) => ({
   },
 
   logout: async () => {
-    const currentUser = get().authUser;
-    if (!currentUser) return; // Don't proceed if no user is logged in
-    
     try {
       await axiosInstance.post("/auth/logout");
       set({ authUser: null });
