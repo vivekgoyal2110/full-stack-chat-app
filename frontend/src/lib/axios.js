@@ -10,26 +10,14 @@ export const axiosInstance = axios.create({
   }
 });
 
-// Add request interceptor to include token
-axiosInstance.interceptors.request.use(
-  (config) => {
-    const authUser = JSON.parse(localStorage.getItem('authUser') || '{}');
-    if (authUser?.token) {
-      config.headers.Authorization = `Bearer ${authUser.token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
 // Add response interceptor to handle 401 errors
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('authUser');
+      // Clear any stored user data
+      localStorage.removeItem('user');
+      // Redirect to login if needed
       window.location.href = '/login';
     }
     return Promise.reject(error);

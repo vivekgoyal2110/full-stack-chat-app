@@ -2,7 +2,6 @@ import { Server } from "socket.io";
 import http from "http";
 import express from "express";
 import User from "../models/user.model.js";
-import jwt from 'jsonwebtoken';
 
 const app = express();
 const server = http.createServer(app);
@@ -10,6 +9,7 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: function(origin, callback) {
+      // Allow requests with no origin (like mobile apps)
       if (!origin) {
         return callback(null, true);
       }
@@ -30,57 +30,11 @@ const io = new Server(server, {
   },
   allowEIO3: true,
   transports: ['websocket', 'polling'],
-});
-
-const extractToken = (socket) => {
-  // Try to get token from auth object (set by client)
-  const authToken = socket.handshake.auth?.token;
-  if (authToken) return authToken;
-
-  // Try to get token from headers
-  const authHeader = socket.handshake.headers?.authorization;
-  if (authHeader?.startsWith('Bearer ')) {
-    return authHeader.split(' ')[1];
-  }
-
-  // Try to get token from cookie
-  const cookies = socket.handshake.headers?.cookie;
-  if (cookies) {
-    const jwtCookie = cookies.split(';').find(c => c.trim().startsWith('jwt='));
-    if (jwtCookie) {
-      return jwtCookie.split('=')[1];
-    }
-  }
-
-  return null;
-};
-
-// Socket authentication middleware
-io.use(async (socket, next) => {
-  try {
-    const token = extractToken(socket);
-    
-    if (!token) {
-      return next(new Error('Authentication error - No token provided'));
-    }
-
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const user = await User.findById(decoded.userId).select("-password");
-      
-      if (!user) {
-        return next(new Error('User not found'));
-      }
-
-      socket.user = user;
-      next();
-    } catch (tokenError) {
-      console.error('Token verification failed:', tokenError);
-      return next(new Error('Invalid token'));
-    }
-  } catch (error) {
-    console.error('Socket authentication error:', error);
-    return next(new Error('Authentication error'));
+  cookie: {
+    name: "io",
+    httpOnly: true,
+    sameSite: "none",
+    secure: true
   }
 });
 
@@ -93,14 +47,19 @@ export function getReceiverSocketId(userId) {
 io.on("connection", (socket) => {
   console.log("A user connected", socket.id);
 
-  const userId = socket.user._id;
+  const userId = socket.handshake.query.userId;
   if (userId) {
     userSocketMap[userId] = socket.id;
+    // Broadcast when a user connects
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
   }
 
+  // Handle real-time messaging
   socket.on("sendMessage", async (message) => {
+    console.log("Message received:", message);
+
     try {
+      // Check if either user has blocked the other
       const [sender, receiver] = await Promise.all([
         User.findById(message.senderId),
         User.findById(message.receiverId)
@@ -108,6 +67,7 @@ io.on("connection", (socket) => {
 
       if (sender.blockedUsers.includes(message.receiverId) || 
           receiver.blockedUsers.includes(message.senderId)) {
+        // Don't forward the message if either user is blocked
         return;
       }
 
@@ -127,6 +87,7 @@ io.on("connection", (socket) => {
 
   socket.on("typing", async ({ receiverId, isTyping }) => {
     try {
+      // Check if either user has blocked the other
       const [sender, receiver] = await Promise.all([
         User.findById(userId),
         User.findById(receiverId)
@@ -134,6 +95,7 @@ io.on("connection", (socket) => {
 
       if (sender.blockedUsers.includes(receiverId) || 
           receiver.blockedUsers.includes(userId)) {
+        // Don't forward typing status if either user is blocked
         return;
       }
 
